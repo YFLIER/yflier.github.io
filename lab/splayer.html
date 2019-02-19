@@ -12,7 +12,11 @@
         ["xmly", "Big Steps 3", "4534989"],
         ["xmly", "小马宝莉【巴巴妈妈讲故事】", "341210"],
         ["xmly", "获奖|经典绘本故事【巴巴妈妈】", "338340"],
-        ["xmly", "海底小纵队【巴巴妈妈讲故事】", "3746044"]
+        ["xmly", "海底小纵队【巴巴妈妈讲故事】", "3746044"],
+        ["xmly", "机灵儿｜中国历史故事（全集）", "6569321"],
+        ["xmly", "写给儿童的中国历史故事集", "11344893"],
+        ["xmly", "宝宝巴士国学·成语故事", "16632143"],
+        ["xmly", "中国成语故事", "6495745"]
     ];
 </script>
 <script type="text/javascript">
@@ -52,6 +56,7 @@
 	}
 
     function installAlbum(lid, sp, fr, nm, aid) {
+    	console.log("install " + fr + "'s aid " + aid + " to " + lid);
         var list = [];
         if (fr == 'xmly') {
             list = xmlyGetList(aid);
@@ -73,7 +78,7 @@
             var jid = '#'+fid;
             var html = '';
             for (var i = 0; i < fastAlbumIds.length; i++) {
-                html = html + '<button onclick="installAlbum(\'plist\',sp,\''+fastAlbumIds[i][0]+'\',\''+fastAlbumIds[i][1]+'\',\''+fastAlbumIds[i][2]+'\')">'+fastAlbumIds[i][1]+'</button>';
+                html = html + '<button onclick="installAlbum(\'plist\',sp,\''+fastAlbumIds[i][0]+'\',\''+fastAlbumIds[i][1]+'\',\''+fastAlbumIds[i][2]+'\')">'+fastAlbumIds[i][1]+'</button></br>';
             }
             $(jid).html(html);
         }
@@ -89,6 +94,26 @@
         this.curTrackId = -1;
         this.curTrackPos = 0;
         this.curTrackLooper = 1;
+        this.totalDuration = 0;
+        this.curProgress = 0;
+        
+        this.calcTotalDuration = function() {
+        	var l = 0;
+        	for (var i = 0; i < this.curPlayList.length; i++) {
+        		var g = this.curPlayList[i];
+        		var glp = g.loop;
+        		var gdur = 0;
+        		for (var j = 0; j < g.tracks.length; j++) {
+        			t = g.tracks[j];
+        			gdur = gdur+t.dur*t.loop;
+        		}
+        		l = l+gdur*glp;
+        	}
+        	this.totalDuration = l;
+        	console.log("total duration: "+this.totalDuration);
+        }
+        
+        this.calcTotalDuration();
         
         this.setAudio = function(aud_id) {
         	this.audio = $("#"+aud_id)[0];
@@ -105,6 +130,7 @@
             this.curTrackId = -1;
             this.curTrackPos = 0;
             this.curTrackLooper = 1;
+            this.calcTotalDuration();
         }
         
         this.getTrackLoop = function(gid, id) {
@@ -125,6 +151,7 @@
                 if (tracks.length > id) {
                     this.curPlayList[gid].tracks[id].loop = iv;
                 }
+                this.calcTotalDuration();
             }
         }
         
@@ -134,6 +161,7 @@
         
         this.setGroupLoop = function(gid, iv) {
             this.curPlayList[gid].loop = iv;
+            this.calcTotalDuration();
         }
         
         this.getCurTrack = function() {
@@ -252,14 +280,21 @@
         }
     }
     
+    function uiUpdateTotalDuration(sp) {
+    	var mins = parseInt(sp.totalDuration/60);
+    	var secs = sp.totalDuration%60;
+    	$("#tdur").text(""+mins+":"+secs);
+    }
+    
     function gdeloop(id, sp) {
         var jqid = "#"+id;
-		var sv = $(jqid).attr("value");
+		var sv = $(jqid).val();
 		var iv = parseInt(sv);
 		if (iv > 1) {
 			iv = iv-1;
-			$(jqid).attr("value", ""+iv);
+			$(jqid).val(""+iv);
 			sp.setGroupLoop(0, iv);
+			uiUpdateTotalDuration(sp);
 		}
     }
     
@@ -271,18 +306,20 @@
 			iv = iv+1;
 			$(jqid).val(""+iv);
 			sp.setGroupLoop(0, iv);
+			uiUpdateTotalDuration(sp);
 		}
     }
     
 	function deloop(id, sp) {
 		var jqid = "#lp"+id;
 		var jqid2 = "#nm"+id;
-		var sv = $(jqid).attr("value");
+		var sv = $(jqid).val();
 		var iv = parseInt(sv);
 		if (iv > 0) {
 			iv = iv-1;
-			$(jqid).attr("value", ""+iv);
+			$(jqid).val(""+iv);
 			sp.setTrackLoop(0, id, iv);
+			uiUpdateTotalDuration(sp);
 			if (iv <= 0) {
 				$(jqid2).css("color", "black");
 			}
@@ -298,6 +335,7 @@
 			iv = iv+1;
 			$(jqid).val(""+iv);
 			sp.setTrackLoop(0, id, iv);
+			uiUpdateTotalDuration(sp);
 			if (iv > 0) {
 				$(jqid2).css("color", "red");
 			}
@@ -336,18 +374,17 @@
 </head>
 <body>
 <div>
-    <audio id='myaudio' controls='controls'></audio>
-    <br/>
-    <button id="start" onclick="startPlay(sp);">start</button><button id="pause" onclick="pausePlay(sp);">pause</button>
+<audio id='myaudio' controls='controls'></audio><br/>
+<button id="start" onclick="startPlay(sp);">start</button><button id="pause" onclick="pausePlay(sp);">pause</button>
 </div>
 <p>
-Fast ID: <span id="fastids"></span>
+<span id="fastids"></span>
 </p>
 <p>
-Customize Album ID: <input id="cusaid" size="10"></input><button id="custom">Custom</button>
+Custom XMLY Album ID: <input id="cusaid" size="10"></input><button id="custom" onclick="installAlbum('plist', sp, 'xmly', '', $('#cusaid').val());">Go</button>
 </p>
 <strong>Playing:</strong><br/>
-Total Progress: <span id="cprog">0</span>/<span id="tprog">0</span><br/>
+Total Progress: <span id="cpro">0</span>/<span id="tdur">0</span><br/>
 Current Album: <span id="curaid">-</span>,<span id="curanm">-</span>,第<span id="curalp">0</span>/<span id="curalps">0</span>次</br>
 Current Track: <span id="curtid">-</span>,<span id="curtnm">-</span>,第<span id="curtlp">0</span>/<span id="curtlps">0</span>次</br>
 Album Loop: <button onclick="gdeloop('aloop', sp);">-</button><input id="aloop" type="text" size="2" value="1"></input><button onclick="gadloop('aloop', sp);">+</button><br/>
