@@ -1,0 +1,356 @@
+<html>
+<head>
+
+<meta charset="utf-8" />
+<!-- https://cdn.bootcss.com/jquery/1.11.3/jquery.min.js -->
+<!-- http://jplayer.org/latest/lib/jquery.min.js -->
+<!-- http://jplayer.org/latest/dist/jplayer/jquery.jplayer.min.js -->
+<!-- http://jplayer.org/latest/dist/add-on/jplayer.playlist.min.js -->
+<script type="text/javascript" src="../files/jquery.min.js"></script>
+<script type="text/javascript">
+    var fastAlbumIds = [
+        ["xmly", "Big Steps 3", "4534989"],
+        ["xmly", "小马宝莉【巴巴妈妈讲故事】", "341210"],
+        ["xmly", "获奖|经典绘本故事【巴巴妈妈】", "338340"],
+        ["xmly", "海底小纵队【巴巴妈妈讲故事】", "3746044"]
+    ];
+</script>
+<script type="text/javascript">
+    function xmlyParseResult(str) {
+		// {"ret":200,"msg":"声音播放数据","data":{"uid":0,"albumId":14164578,"sort":0,"pageNum":1,"pageSize":30,"tracksAudioPlay":[{"index":1,"trackId":76051589,"trackName":"见识——序言","trackUrl":"/youshengshu/14164578/76051589","trackCoverPath":"//imagev2.xmcdn.com/group40/M07/5F/63/wKgJVFqlNSPy8FjeAARtk-rVxwU192.jpg","albumId":14164578,"sourceAlbumId":14164578,"albumName":"见识","albumUrl":"/youshengshu/14164578/","anchorId":20248460,"canPlay":true,"isBaiduMusic":false,"isPaid":false,"duration":1297,"src":"http://audio.xmcdn.com/group41/M0B/97/53/wKgJ8VqlNefiN57XAKBUgfCbGLI014.m4a","hasBuy":true,"albumIsSample":false,"sampleDuration":0,"updateTime":"11月前","createTime":"11月前","isLike":false,"isCopyright":true},
+		var data = JSON.parse(str);
+		var ret = [];
+		if (data.ret == 200) {
+			var data2 = data.data;
+			var tracks = data2.tracksAudioPlay;
+			for (var i=0; i<tracks.length; i++) {
+				r = {};
+				r["name"] = tracks[i].trackName;
+				r["dur"] = tracks[i].duration;
+				r["src"] = tracks[i].src;
+				r["loop"] = 0;
+				ret[i] = r;
+			}
+		}
+		return ret;
+	}
+
+	function xmlyGetList(aid) {
+	    // https://www.ximalaya.com/revision/play/album?albumId=14164578&pageNum=1&sort=0&pageSize=30
+	   var  _ret = [];
+	    for (var j=1;j>0;j++) {
+	        var _url = "https://www.ximalaya.com/revision/play/album?albumId="+aid+"&pageNum="+j+"&sort=0&pageSize=30";
+            var htmlobj=$.ajax({url:_url,async:false});
+  	        var resp = htmlobj.responseText;
+  	        var list = xmlyParseResult(resp);
+  	        if (list.length == 0) {
+  	            break;
+  	        }
+  	        _ret.push.apply(_ret, list);
+  	    }
+  	    return _ret;
+	}
+
+    function installAlbum(lid, sp, fr, nm, aid) {
+        var list = [];
+        if (fr == 'xmly') {
+            list = xmlyGetList(aid);
+        }
+        
+        var jid = '#'+lid;
+        var str = '';
+    	for (var i=0; i < list.length; i++) {
+    		var name = list[i].name;
+    		str = str + '<button id="de'+i+'" onclick="deloop('+i+', sp);">-</button><input id="lp'+i+'" type="text" size="2" value="0"></input><button id="ad'+i+'" onclick="adloop('+i+', sp)">+</button>'+(i+1)+'.<span id="nm'+i+'">'+name+'</span><br/>';
+    	}
+    	$(jid).html(str);
+    	
+    	sp.setCurPlayList([{tracks:list, loop:1}]);
+    }
+    
+    function innerFastAlbumIds(fid) {
+        if (fastAlbumIds != null && fastAlbumIds.length > 0) {
+            var jid = '#'+fid;
+            var html = '';
+            for (var i = 0; i < fastAlbumIds.length; i++) {
+                html = html + '<button onclick="installAlbum(\'plist\',sp,\''+fastAlbumIds[i][0]+'\',\''+fastAlbumIds[i][1]+'\',\''+fastAlbumIds[i][2]+'\')">'+fastAlbumIds[i][1]+'</button>';
+            }
+            $(jid).html(html);
+        }
+    }
+
+    //task: [{"tracks":[{name:, src:, dur:, loop:}, {}], "loop":2}]
+    function SPlayer(aud_id, plist) {
+        this.audio = $("#"+aud_id)[0];
+        
+        this.curPlayList = plist;
+        this.curGroupId = 0;
+        this.curGroupLooper = 1;
+        this.curTrackId = -1;
+        this.curTrackPos = 0;
+        this.curTrackLooper = 1;
+        
+        this.setAudio = function(aud_id) {
+        	this.audio = $("#"+aud_id)[0];
+        }
+        
+        this.setCurTrackPos = function(pos) {
+        	this.curTrackPos = pos;
+        }
+        
+        this.setCurPlayList = function(plist) {
+            this.curPlayList = plist;
+            this.curGroupId = 0;
+            this.curGroupLooper = 1;
+            this.curTrackId = -1;
+            this.curTrackPos = 0;
+            this.curTrackLooper = 1;
+        }
+        
+        this.getTrackLoop = function(gid, id) {
+            if (this.curPlayList.length > gid) {
+                var glist = this.curPlayList[gid];
+                var tracks = glist.tracks;
+                if (tracks.length > id) {
+                    return this.curPlayList[gid].tracks[id].loop;
+                }
+            }
+            return 0;
+        }
+        
+        this.setTrackLoop = function(gid, id, iv) {
+            if (this.curPlayList.length > gid) {
+                var glist = this.curPlayList[gid];
+                var tracks = glist.tracks;
+                if (tracks.length > id) {
+                    this.curPlayList[gid].tracks[id].loop = iv;
+                }
+            }
+        }
+        
+        this.getGroupLoop = function(gid) {
+            return this.curPlayList[gid].loop;
+        }
+        
+        this.setGroupLoop = function(gid, iv) {
+            this.curPlayList[gid].loop = iv;
+        }
+        
+        this.getCurTrack = function() {
+            return this.curPlayList[0].tracks[this.curTrackId];
+        }
+        
+        this.getTracksSize = function() {
+            return this.curPlayList[0].tracks.length;
+        }
+        
+        this.getCurTrackName = function() {
+            return this.getCurTrack().name;
+        }
+        
+        this.getCurTrackSrc = function() {
+            return this.getCurTrack().src;
+        }
+        
+        this.getCurTrackDuration = function() {
+            return this.getCurTrack().dur;
+        }
+        
+        this.getCurTrackLoop = function() {
+            return this.getCurTrack().loop;
+        }
+        
+        this.start = function() {
+            if (this.curTrackId < 0) {
+                for (var i=0; i<this.getTracksSize(); i++) {
+                    if (this.getTrackLoop(0, i) > 0) {
+                        this.curTrackId = i;
+                        this.curTrackPos = 0;
+                        this.curTrackLooper = 1;
+                        this.audio.src = this.getCurTrackSrc();
+                        break;
+                    }
+                }
+            } else if (this.audio.src == '') {
+                this.audio.src = this.getCurTrackSrc();
+            }
+            this.audio.play();
+        }
+        
+        this.pause = function() {
+            this.audio.pause();
+        }
+        
+        this.stop = function() {
+            this.audio.pause();
+            this.audio.src='';
+        }
+        
+        this.next = function() {
+            for (var i=this.curTrackId+1; i<this.getTracksSize(); i++) {
+                if (this.getTrackLoop(0, i) > 0) {
+                    this.curTrackId = i;
+                    this.curTrackPos = 0;
+                    this.curTrackLooper = 1;
+                    this.audio.src = this.getCurTrackSrc();
+                    this.audio.play();
+                    break;
+                }
+            }
+        }
+        
+        this.autoNext = function() {
+            if (this.curTrackLooper < this.getTrackLoop(0, this.curTrackId)) {
+                this.curTrackPos = 0;
+                this.curTrackLooper = this.curTrackLooper+1;
+                this.audio.src = this.getCurTrackSrc();
+                this.audio.play();
+            } else {
+                for (var i=this.curTrackId+1; i<this.getTracksSize(); i++) {
+                    if (this.getTrackLoop(0, i) > 0) {
+                        this.curTrackId = i;
+                        this.curTrackPos = 0;
+                        this.curTrackLooper = 1;
+                        this.audio.pause();
+                        this.audio.load();
+                        this.audio.src = this.getCurTrackSrc();
+                        this.audio.play();
+                        break;
+                    }
+                    this.curTrackId = -1;
+                }
+                
+                if (this.curTrackId == -1) {
+                    if (this.curGroupLooper < this.getGroupLoop(0)) {
+                        this.curTrackId = 0;
+                        this.curTrackPos = 0;
+                        this.curTrackLooper = 1;
+                        this.curGroupLooper = this.curGroupLooper+1;
+                        this.audio.pause();
+                        this.audio.load();
+                        this.audio.src = this.getCurTrackSrc();
+                        this.audio.play();
+                    }
+                }
+            }
+        }
+        
+        this.prev = function() {
+            for (var i=this.curTrackId-1; i>=0; i--) {
+                if (this.getTrackLoop(0, i) > 0) {
+                    this.curTrackId = i;
+                    this.curTrackPos = 0;
+                    this.curTrackLooper = 1;
+                    this.audio.src = this.getCurTrackSrc();
+                    this.audio.play();
+                }
+            }
+        }
+        
+        this.audio.onended = function() {
+            sp.autoNext();
+        }
+    }
+    
+    function gdeloop(id, sp) {
+        var jqid = "#"+id;
+		var sv = $(jqid).attr("value");
+		var iv = parseInt(sv);
+		if (iv > 1) {
+			iv = iv-1;
+			$(jqid).attr("value", ""+iv);
+			sp.setGroupLoop(0, iv);
+		}
+    }
+    
+    function gadloop(id, sp) {
+    	var jqid = "#"+id;
+		var sv = $(jqid).val();
+		var iv = parseInt(sv);
+		if (iv < 100) {
+			iv = iv+1;
+			$(jqid).val(""+iv);
+			sp.setGroupLoop(0, iv);
+		}
+    }
+    
+	function deloop(id, sp) {
+		var jqid = "#lp"+id;
+		var jqid2 = "#nm"+id;
+		var sv = $(jqid).attr("value");
+		var iv = parseInt(sv);
+		if (iv > 0) {
+			iv = iv-1;
+			$(jqid).attr("value", ""+iv);
+			sp.setTrackLoop(0, id, iv);
+			if (iv <= 0) {
+				$(jqid2).css("color", "black");
+			}
+		}
+	}
+	
+	function adloop(id, sp) {
+		var jqid = "#lp"+id;
+		var jqid2 = "#nm"+id;
+		var sv = $(jqid).val();
+		var iv = parseInt(sv);
+		if (iv < 100) {
+			iv = iv+1;
+			$(jqid).val(""+iv);
+			sp.setTrackLoop(0, id, iv);
+			if (iv > 0) {
+				$(jqid2).css("color", "red");
+			}
+		}
+	}
+	
+	function startPlay(sp) {
+	    sp.start();
+	}
+	
+	function pausePlay(sp) {
+	    sp.pause();
+	}
+	
+	function stopPlay(sp) {
+	    sp.stop();
+	}
+	
+	function prevPlay(sp) {
+	    sp.prev();
+	}
+	
+	function nextPlay(sp) {
+	    sp.next();
+	}
+	
+</script>
+<script type="text/javascript">
+    var sp;
+    function onReady() {
+        sp = new SPlayer("myaudio", []);
+        innerFastAlbumIds("fastids");
+    }
+    $(document).ready(onReady);
+</script>
+</head>
+<body>
+<div>
+    <audio id='myaudio' controls='controls'></audio>
+    <br/>
+    <button id="start" onclick="startPlay(sp);">start</button><button id="pause" onclick="pausePlay(sp);">pause</button>
+</div>
+<p>
+Fast ID: <span id="fastids"></span>
+</p>
+<p>
+Customize Album ID: <input id="cusaid" size="10"></input><button id="custom">Custom</button>
+</p>
+<strong>Playing:</strong><br/>
+Total Progress: <span id="cprog">0</span>/<span id="tprog">0</span><br/>
+Current Album: <span id="curaid">-</span>,<span id="curanm">-</span>,第<span id="curalp">0</span>/<span id="curalps">0</span>次</br>
+Current Track: <span id="curtid">-</span>,<span id="curtnm">-</span>,第<span id="curtlp">0</span>/<span id="curtlps">0</span>次</br>
+Album Loop: <button onclick="gdeloop('aloop', sp);">-</button><input id="aloop" type="text" size="2" value="1"></input><button onclick="gadloop('aloop', sp);">-</button><br/>
+<div id="plist"></div>
+</body>
+</html>
