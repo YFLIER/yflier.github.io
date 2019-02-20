@@ -20,6 +20,35 @@
     ];
 </script>
 <script type="text/javascript">
+    function PlayerWakeLock(id, src) {
+        this.audio = $("#"+id)[0];
+        this.src = src;
+        this.flag = 0;
+
+        this.acquire = function() {
+            if (this.flag <= 0) {
+                this.audio.load();
+                this.audio.src = src;
+                this.audio.loop = "loop";
+                this.audio.play();
+                this.flag = this.flag+1;;
+            }
+        }
+
+        this.isHeld = function() {
+            return this.flag;
+        }
+
+        this.audio.onended = function() {
+            this.flag = 0;
+        }
+
+        this.release = function() {
+            this.audio.pause();
+            this.flag = 0;
+        }
+    }
+
     function xmlyParseResult(str) {
 		// {"ret":200,"msg":"声音播放数据","data":{"uid":0,"albumId":14164578,"sort":0,"pageNum":1,"pageSize":30,"tracksAudioPlay":[{"index":1,"trackId":76051589,"trackName":"见识——序言","trackUrl":"/youshengshu/14164578/76051589","trackCoverPath":"//imagev2.xmcdn.com/group40/M07/5F/63/wKgJVFqlNSPy8FjeAARtk-rVxwU192.jpg","albumId":14164578,"sourceAlbumId":14164578,"albumName":"见识","albumUrl":"/youshengshu/14164578/","anchorId":20248460,"canPlay":true,"isBaiduMusic":false,"isPaid":false,"duration":1297,"src":"http://audio.xmcdn.com/group41/M0B/97/53/wKgJ8VqlNefiN57XAKBUgfCbGLI014.m4a","hasBuy":true,"albumIsSample":false,"sampleDuration":0,"updateTime":"11月前","createTime":"11月前","isLike":false,"isCopyright":true},
 		var data = JSON.parse(str);
@@ -343,15 +372,18 @@
 	}
 	
 	function startPlay(sp) {
+        pwl.acquire();
 	    sp.start();
 	}
 	
 	function pausePlay(sp) {
 	    sp.pause();
+        pwl.release();
 	}
 	
 	function stopPlay(sp) {
 	    sp.stop();
+        pwl.release();
 	}
 	
 	function prevPlay(sp) {
@@ -364,9 +396,10 @@
 	
 </script>
 <script type="text/javascript">
-    var sp;
+    var sp, pwl;
     function onReady() {
         sp = new SPlayer("myaudio", []);
+        pwl = new PlayerWakeLock("wlaudio", "../files/empty.mp3");
         innerFastAlbumIds("fastids");
     }
     $(document).ready(onReady);
@@ -374,7 +407,8 @@
 </head>
 <body>
 <div>
-<audio id='myaudio' controls='controls'></audio><br/>
+<audio id="wlaudio" controls="controls" hidden></audio><br/>
+<audio id="myaudio" controls="controls"></audio><br/>
 <button id="start" onclick="startPlay(sp);">start</button><button id="pause" onclick="pausePlay(sp);">pause</button>
 </div>
 <p>
