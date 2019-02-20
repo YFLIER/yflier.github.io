@@ -372,18 +372,18 @@
 	}
 	
 	function startPlay(sp) {
-        pwl.acquire();
+        //pwl.acquire();
 	    sp.start();
 	}
 	
 	function pausePlay(sp) {
 	    sp.pause();
-        pwl.release();
+        //pwl.release();
 	}
 	
 	function stopPlay(sp) {
 	    sp.stop();
-        pwl.release();
+        //pwl.release();
 	}
 	
 	function prevPlay(sp) {
@@ -407,7 +407,7 @@
 </head>
 <body>
 <div>
-<audio id="wlaudio" controls="controls" loop="loop"></audio><br/>
+<audio id="wlaudio" controls="controls" loop="loop" hidden></audio><br/>
 <audio id="myaudio" controls="controls"></audio><br/>
 <button id="start" onclick="startPlay(sp);">start</button><button id="pause" onclick="pausePlay(sp);">pause</button>
 </div>
