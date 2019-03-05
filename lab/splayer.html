@@ -124,7 +124,9 @@
         this.curTrackPos = 0;
         this.curTrackLooper = 1;
         this.totalDuration = 0;
-        this.curProgress = 0;
+        this.totalCurrentTime = 0;
+
+        this.CHECK_CURRENT_TIME_FLAG = false;
         
         this.calcTotalDuration = function() {
         	var l = 0;
@@ -217,6 +219,13 @@
             return this.getCurTrack().loop;
         }
         
+        this.play = function() {
+            this.audio.pause();
+            this.audio.load();
+            this.audio.src = this.getCurTrackSrc();
+            this.audio.play();
+        }
+
         this.start = function() {
             if (this.curTrackId < 0) {
                 for (var i=0; i<this.getTracksSize(); i++) {
@@ -224,17 +233,17 @@
                         this.curTrackId = i;
                         this.curTrackPos = 0;
                         this.curTrackLooper = 1;
-                        this.audio.src = this.getCurTrackSrc();
+                        this.play();
                         break;
                     }
                 }
             } else if (this.audio.src == '') {
-                this.audio.src = this.getCurTrackSrc();
+                this.play();
             }
-            this.audio.play();
         }
         
         this.pause = function() {
+            CHECK_CURRENT_TIME_FLAG = false;
             this.audio.pause();
         }
         
@@ -303,9 +312,35 @@
                 }
             }
         }
-        
+
+        this.startCheckCurrentTime = function() {
+            var cur = sp.audio.currentTime;
+            var dur = sp.audio.duration;
+            console.log("check: cur " + cur + ", dur " + dur + ", flag " + sp.CHECK_CURRENT_TIME_FLAG);
+            if (cur >= dur) {
+                sp.autoNext();
+            }
+            if (sp.CHECK_CURRENT_TIME_FLAG) {
+                setTimeout(sp.audio.pause, 10000);
+                CHECK_CURRENT_TIME_FLAG = false;
+            }
+        }
+
         this.audio.onended = function() {
-            sp.autoNext();
+            sp.CHECK_CURRENT_TIME_FLAG = false;
+            console.log("audio.onended");
+            // sp.autoNext();
+        }
+        
+        this.audio.onpause = function() {
+            sp.CHECK_CURRENT_TIME_FLAG = false;
+            console.log("audio.onpause");
+        }
+
+        this.audio.onplaying = function() {
+            console.log("audio.onplaying");
+            sp.CHECK_CURRENT_TIME_FLAG = true;
+            sp.startCheckCurrentTime();
         }
     }
     
