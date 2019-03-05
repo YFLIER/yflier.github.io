@@ -329,7 +329,7 @@
         this.audio.onended = function() {
             sp.CHECK_CURRENT_TIME_FLAG = false;
             console.log("audio.onended");
-            // sp.autoNext();
+            sp.autoNext();
         }
         
         this.audio.onpause = function() {
@@ -340,7 +340,7 @@
         this.audio.onplaying = function() {
             console.log("audio.onplaying");
             sp.CHECK_CURRENT_TIME_FLAG = true;
-            sp.startCheckCurrentTime();
+            //sp.startCheckCurrentTime();
         }
     }
     
